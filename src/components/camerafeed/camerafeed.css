@@ -12,6 +12,10 @@
     object-fit: cover;
 }
 
+.camera-feed-container video {
+    transform: scaleX(-1);
+}
+
 .camera-controls {
     display: flex;
     gap: 12px;
