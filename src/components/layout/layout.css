@@ -13,6 +13,7 @@
 
 .children-container{
     display: flex;
+    background-color: #aeaeae;
     flex-direction: row;
     justify-content: space-between;
     padding: 60px 40px;
