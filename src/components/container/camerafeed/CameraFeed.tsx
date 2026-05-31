@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import "./camerafeed.css"
+import "./camerafeed.css";
 import offCamera from "../../../assets/OffCamera.jpg";
 
 const CameraFeed = () => {
