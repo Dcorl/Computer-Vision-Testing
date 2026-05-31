@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./camerafeed.css"
-import offCamera from "../../assets/OffCamera.jpg";
+import offCamera from "../../../assets/OffCamera.jpg";
 
 const CameraFeed = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
