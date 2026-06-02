@@ -4,6 +4,7 @@ import offCamera from "../../../assets/OffCamera.jpg";
 
 const CameraFeed = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
+    const canvasRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const [cameraOn, setCameraOn] = useState(false);
     const [paused, setPaused] = useState(false);
@@ -53,10 +54,33 @@ const CameraFeed = () => {
         return () => stopCamera();
     }, []);
 
+    const sendFrame = () => {
+        const video = videoRef.current;
+        const canvas = canvasRef.current;
+        if (!video || !canvas || !cameraOn || paused) return;
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        canvas.getContext("2d")?.drawImage(video, 0, 0);
+        const base64 = canvas.toDataURL("image/jpeg").split(",")[1];
+        fetch("http://localhost:8000/frame", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ image: base64 }),
+        }).catch((err) => console.error("Frame send error:", err));
+    };
+
+    useEffect(() => {
+        const captureInterval = setInterval(() => {
+            sendFrame();
+        }, 500);
+        return () => clearInterval(captureInterval);
+    }, [cameraOn, paused]);
+
     return (
         <div className="camera-feed-container">
             {!cameraOn && <img src={offCamera} className="camera-off-img" alt="Camera off" />}
             <video ref={videoRef} autoPlay playsInline style={{ display: cameraOn ? "block" : "none" }} />
+            <canvas ref={canvasRef} style={{ display: "none" }} />
             <div className="camera-controls">
                 <button onClick={toggleCamera} className={cameraOn ? "btn-active" : "btn-inactive"}>
                     <span className={cameraOn ? "live-dot" : "live-dot-still"}>●</span>
