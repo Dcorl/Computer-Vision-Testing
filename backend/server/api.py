@@ -1,13 +1,17 @@
 from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from schemas import Frame
 
 app = FastAPI()
 
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173"],
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
-@app.get("/")
-async def root():
-    return {"message": "Hello World"}
-
-
-if __name__ == "__main__":
-    import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+@app.post("/frame")
+async def receive_frame(data: Frame):
+    print(f"Received frame, size: {len(data.image)} bytes")
+    return {"status": "ok"}
