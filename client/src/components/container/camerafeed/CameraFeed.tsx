@@ -1,6 +1,5 @@
 import { useEffect, useRef, useState } from "react";
 import "./camerafeed.css";
-import offCamera from "../../../assets/OffCamera.jpg";
 
 interface Detection {
     label: string;
@@ -16,8 +15,10 @@ const CameraFeed = () => {
     const canvasRef = useRef<HTMLCanvasElement>(null);
     const overlayRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
+    const frameCountRef = useRef(0);
     const [cameraOn, setCameraOn] = useState(false);
     const [paused, setPaused] = useState(false);
+    const [fps, setFps] = useState<number | null>(null);
 
     const startCamera = () => {
         navigator.mediaDevices.getUserMedia({ video: true })
@@ -44,6 +45,7 @@ const CameraFeed = () => {
         clearOverlay();
         setCameraOn(false);
         setPaused(false);
+        setFps(null);
     };
 
     const toggleCamera = () => {
@@ -71,6 +73,16 @@ const CameraFeed = () => {
         overlay.getContext("2d")?.clearRect(0, 0, overlay.width, overlay.height);
     };
 
+    const labelColor = (label: string): string => {
+        let hash = 0;
+        for (let i = 0; i < label.length; i++) {
+            hash = (hash << 5) - hash + label.charCodeAt(i);
+            hash |= 0;
+        }
+        const hue = ((hash % 360) + 360) % 360;
+        return `hsl(${hue}, 70%, 72%)`;
+    };
+
     const drawDetections = (detections: Detection[]) => {
         const overlay = overlayRef.current;
         const video = videoRef.current;
@@ -88,15 +100,16 @@ const CameraFeed = () => {
             const y = det.y1;
             const w = det.x2 - det.x1;
             const h = det.y2 - det.y1;
+            const color = labelColor(det.label);
 
-            ctx.strokeStyle = "#00ff00";
+            ctx.strokeStyle = color;
             ctx.lineWidth = 2;
             ctx.strokeRect(x, y, w, h);
 
             const label = `${det.label} ${(det.confidence * 100).toFixed(0)}%`;
-            ctx.font = "bold 14px sans-serif";
+            ctx.font = "bold 14px 'Poppins', sans-serif";
             const textWidth = ctx.measureText(label).width;
-            ctx.fillStyle = "#00ff00";
+            ctx.fillStyle = color;
             ctx.fillRect(x, y - 22, textWidth + 8, 22);
             ctx.fillStyle = "#000";
             ctx.fillText(label, x + 4, y - 5);
@@ -116,6 +129,7 @@ const CameraFeed = () => {
         ctx.drawImage(video, 0, 0);
         ctx.setTransform(1, 0, 0, 1, 0, 0);
         const base64 = canvas.toDataURL("image/jpeg").split(",")[1];
+        frameCountRef.current++;
         fetch("http://localhost:8000/frame", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -127,31 +141,66 @@ const CameraFeed = () => {
     };
 
     useEffect(() => {
-        const captureInterval = setInterval(() => {
-            sendFrame();
-        }, 500);
+        const captureInterval = setInterval(sendFrame, 500);
         return () => clearInterval(captureInterval);
     }, [cameraOn, paused]);
 
+    useEffect(() => {
+        if (!cameraOn) { setFps(null); return; }
+        const fpsInterval = setInterval(() => {
+            setFps(frameCountRef.current);
+            frameCountRef.current = 0;
+        }, 1000);
+        return () => clearInterval(fpsInterval);
+    }, [cameraOn]);
+
     return (
-        <div className="camera-feed-container">
-            {!cameraOn && <img src={offCamera} className="camera-off-img" alt="Camera off" />}
-            <div className="video-wrapper" style={{ display: cameraOn ? "block" : "none" }}>
-                <video ref={videoRef} autoPlay playsInline />
+        <section className="camera-section">
+            <div className="camera-frame">
+<video
+                    ref={videoRef}
+                    className="camera-video"
+                    autoPlay
+                    playsInline
+                    style={{ display: cameraOn ? 'block' : 'none' }}
+                />
                 <canvas ref={overlayRef} className="detection-overlay" />
+                {!cameraOn && (
+                    <div className="camera-off-state">
+                        <div className="camera-icon-wrap">
+                            <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+                                <rect x="6" y="18" width="52" height="36" rx="5" stroke="#6b6b85" strokeWidth="2.5"/>
+                                <circle cx="32" cy="36" r="10" stroke="#6b6b85" strokeWidth="2.5"/>
+                                <circle cx="32" cy="36" r="5" stroke="#6b6b85" strokeWidth="2"/>
+                                <rect x="22" y="12" width="20" height="8" rx="3" stroke="#6b6b85" strokeWidth="2"/>
+                                <line x1="8" y1="8" x2="56" y2="56" stroke="#6b6b85" strokeWidth="2.5" strokeLinecap="round"/>
+                            </svg>
+                        </div>
+                        <div className="camera-off-text">No Signal</div>
+                    </div>
+                )}
             </div>
-            <canvas ref={canvasRef} style={{ display: "none" }} />
-            <div className="camera-controls">
-                <button onClick={toggleCamera} className={cameraOn ? "btn-active" : "btn-inactive"}>
-                    <span className={cameraOn ? "live-dot" : "live-dot-still"}>●</span>
-                    {cameraOn ? "Live Feed" : "Turn On Camera"}
+            <canvas ref={canvasRef} style={{ display: 'none' }} />
+            <div className="controls-bar">
+                <button
+                    className={`btn ${cameraOn ? 'danger' : 'primary'}`}
+                    onClick={toggleCamera}
+                >
+                    <div className="btn-icon" />
+                    {cameraOn ? 'Stop Camera' : 'Turn On Camera'}
                 </button>
-                <button onClick={togglePause} disabled={!cameraOn} className={cameraOn && !paused ? "btn-active" : "btn-inactive"}>
-                    <span>⏸</span>
-                    {paused ? "Resume" : "Pause"}
+                <button
+                    className={`btn${cameraOn && paused ? ' warn' : ''}`}
+                    onClick={togglePause}
+                    disabled={!cameraOn}
+                >
+                    {paused ? 'Resume' : 'Pause'}
                 </button>
+                {cameraOn && fps !== null && (
+                    <div className="fps-badge">{fps} fps</div>
+                )}
             </div>
-        </div>
+        </section>
     );
 };
 
