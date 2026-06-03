@@ -2,9 +2,19 @@ import { useEffect, useRef, useState } from "react";
 import "./camerafeed.css";
 import offCamera from "../../../assets/OffCamera.jpg";
 
+interface Detection {
+    label: string;
+    confidence: number;
+    x1: number;
+    y1: number;
+    x2: number;
+    y2: number;
+}
+
 const CameraFeed = () => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const canvasRef = useRef<HTMLCanvasElement>(null);
+    const overlayRef = useRef<HTMLCanvasElement>(null);
     const streamRef = useRef<MediaStream | null>(null);
     const [cameraOn, setCameraOn] = useState(false);
     const [paused, setPaused] = useState(false);
@@ -31,6 +41,7 @@ const CameraFeed = () => {
         if (videoRef.current) {
             videoRef.current.srcObject = null;
         }
+        clearOverlay();
         setCameraOn(false);
         setPaused(false);
     };
@@ -54,19 +65,65 @@ const CameraFeed = () => {
         return () => stopCamera();
     }, []);
 
+    const clearOverlay = () => {
+        const overlay = overlayRef.current;
+        if (!overlay) return;
+        overlay.getContext("2d")?.clearRect(0, 0, overlay.width, overlay.height);
+    };
+
+    const drawDetections = (detections: Detection[]) => {
+        const overlay = overlayRef.current;
+        const video = videoRef.current;
+        if (!overlay || !video) return;
+
+        overlay.width = video.videoWidth;
+        overlay.height = video.videoHeight;
+        const ctx = overlay.getContext("2d");
+        if (!ctx) return;
+
+        ctx.clearRect(0, 0, overlay.width, overlay.height);
+
+        for (const det of detections) {
+            const x = det.x1;
+            const y = det.y1;
+            const w = det.x2 - det.x1;
+            const h = det.y2 - det.y1;
+
+            ctx.strokeStyle = "#00ff00";
+            ctx.lineWidth = 2;
+            ctx.strokeRect(x, y, w, h);
+
+            const label = `${det.label} ${(det.confidence * 100).toFixed(0)}%`;
+            ctx.font = "bold 14px sans-serif";
+            const textWidth = ctx.measureText(label).width;
+            ctx.fillStyle = "#00ff00";
+            ctx.fillRect(x, y - 22, textWidth + 8, 22);
+            ctx.fillStyle = "#000";
+            ctx.fillText(label, x + 4, y - 5);
+        }
+    };
+
     const sendFrame = () => {
         const video = videoRef.current;
         const canvas = canvasRef.current;
         if (!video || !canvas || !cameraOn || paused) return;
         canvas.width = video.videoWidth;
         canvas.height = video.videoHeight;
-        canvas.getContext("2d")?.drawImage(video, 0, 0);
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        ctx.translate(canvas.width, 0);
+        ctx.scale(-1, 1);
+        ctx.drawImage(video, 0, 0);
+        ctx.setTransform(1, 0, 0, 1, 0, 0);
         const base64 = canvas.toDataURL("image/jpeg").split(",")[1];
         fetch("http://localhost:8000/frame", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({ image: base64 }),
-        }).catch((err) => console.error("Frame send error:", err));
+        })
+            .then((res) => res.json())
+            .then((data) => drawDetections(data.detections ?? []))
+            .catch((err) => console.error("Frame send error:", err));
     };
 
     useEffect(() => {
@@ -79,7 +136,10 @@ const CameraFeed = () => {
     return (
         <div className="camera-feed-container">
             {!cameraOn && <img src={offCamera} className="camera-off-img" alt="Camera off" />}
-            <video ref={videoRef} autoPlay playsInline style={{ display: cameraOn ? "block" : "none" }} />
+            <div className="video-wrapper" style={{ display: cameraOn ? "block" : "none" }}>
+                <video ref={videoRef} autoPlay playsInline />
+                <canvas ref={overlayRef} className="detection-overlay" />
+            </div>
             <canvas ref={canvasRef} style={{ display: "none" }} />
             <div className="camera-controls">
                 <button onClick={toggleCamera} className={cameraOn ? "btn-active" : "btn-inactive"}>

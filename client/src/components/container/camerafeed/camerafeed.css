@@ -4,7 +4,6 @@
     height: 525px;
 }
 
-.camera-feed-container video,
 .camera-off-img {
     width: 100%;
     height: 100%;
@@ -12,8 +11,27 @@
     object-fit: cover;
 }
 
-.camera-feed-container video {
+.video-wrapper {
+    position: relative;
+    width: 100%;
+    height: calc(100% - 57px);
+}
+
+.video-wrapper video {
+    width: 100%;
+    height: 100%;
+    display: block;
+    object-fit: cover;
     transform: scaleX(-1);
+}
+
+.detection-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
 }
 
 .camera-controls {
