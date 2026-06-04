@@ -9,10 +9,10 @@ interface LayoutProps {
 const Layout = ({children}: LayoutProps) => {
     return (
         <div className="app-layout">
-            <Nav className="navbar-container"/>
-            <div className="children-container">
+            <Nav />
+            <main className="children-container">
                 {children}
-            </div>
+            </main>
         </div>
     );
 };

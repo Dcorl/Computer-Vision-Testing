@@ -1,15 +1,13 @@
 import "./nav.css"
 
-interface NavProps {
-    className?: string
-}
-
-
-const Nav = ({className} : NavProps) => {
+const Nav = () => {
     return (
-        <div className={`${className} nav`}>
-            <h1>Vision Testing</h1>
-        </div>
+        <header>
+            <div className="logo">
+                Vision Testing
+            </div>
+            <div className="header-meta" />
+        </header>
     );
 };
 
