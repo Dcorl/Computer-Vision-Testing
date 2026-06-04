@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import "./camerafeed.css";
+import { useDetections } from "../detectioncontext/DetectionContext.tsx";
 
 interface Detection {
     label: string;
@@ -19,6 +20,7 @@ const CameraFeed = () => {
     const [cameraOn, setCameraOn] = useState(false);
     const [paused, setPaused] = useState(false);
     const [fps, setFps] = useState<number | null>(null);
+    const { updateDetections, clearLog } = useDetections();
 
     const startCamera = () => {
         navigator.mediaDevices.getUserMedia({ video: true })
@@ -43,6 +45,7 @@ const CameraFeed = () => {
             videoRef.current.srcObject = null;
         }
         clearOverlay();
+        clearLog();
         setCameraOn(false);
         setPaused(false);
         setFps(null);
@@ -136,7 +139,11 @@ const CameraFeed = () => {
             body: JSON.stringify({ image: base64 }),
         })
             .then((res) => res.json())
-            .then((data) => drawDetections(data.detections ?? []))
+            .then((data) => {
+                const detections = data.detections ?? [];
+                drawDetections(detections);
+                updateDetections(detections.map((d: Detection) => d.label));
+            })
             .catch((err) => console.error("Frame send error:", err));
     };
 
