@@ -203,3 +203,37 @@
   font-size: 28px;
   opacity: 0.3;
 }
+
+/* Detection log */
+.detection-log {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.detection-log-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 8px 10px;
+  border-radius: 6px;
+  border-left: 2px solid var(--accent);
+  background: rgba(153,193,222,0.06);
+  font-family: var(--display);
+  font-size: 11px;
+}
+
+.detection-label {
+  color: var(--text);
+  font-weight: 600;
+  text-transform: capitalize;
+  letter-spacing: 0.04em;
+}
+
+.detection-duration {
+  color: var(--green);
+  font-size: 10px;
+  letter-spacing: 0.08em;
+  font-variant-numeric: tabular-nums;
+}
