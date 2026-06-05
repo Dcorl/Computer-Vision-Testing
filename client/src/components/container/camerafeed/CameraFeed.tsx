@@ -148,7 +148,7 @@ const CameraFeed = () => {
     };
 
     useEffect(() => {
-        const captureInterval = setInterval(sendFrame, 500);
+        const captureInterval = setInterval(sendFrame, 200);
         return () => clearInterval(captureInterval);
     }, [cameraOn, paused]);
 
