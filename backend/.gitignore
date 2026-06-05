@@ -1,2 +1,2 @@
 venv
-/server/yolov8s.pt
+/vision/models/yolov8s.pt
